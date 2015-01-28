@@ -3,14 +3,14 @@ require 'htmlentities'
 module Griddler
   class Email
     include ActionView::Helpers::SanitizeHelper
-    attr_reader :to, :from, :cc, :subject, :body, :raw_body, :raw_text, :raw_html,
+    attr_reader :to, :from, :cc, :bcc, :subject, :body, :raw_body, :raw_text, :raw_html,
       :headers, :raw_headers, :attachments
 
     def initialize(params)
       @params = params
 
       @to = recipients(:to)
-      @from = extract_address(params[:from], config.from)
+      @from = extract_address(params[:from])
       @subject = params[:subject]
 
       @body = extract_body
@@ -21,16 +21,11 @@ module Griddler
       @headers = extract_headers
 
       @cc = recipients(:cc)
+      @bcc = recipients(:bcc)
 
       @raw_headers = params[:headers]
 
       @attachments = params[:attachments]
-    end
-
-    def process
-      processor_class  = config.processor_class
-      processor_method = config.processor_method
-      processor_class.public_send(processor_method, self)
     end
 
     private
@@ -41,18 +36,12 @@ module Griddler
       @config ||= Griddler.configuration
     end
 
-    def recipients(type=:to)
-      params[type].to_a.map { |recipient| extract_address(recipient, config.send(type)) }
+    def recipients(type)
+      params[type].to_a.map { |recipient| extract_address(recipient) }
     end
 
-    def extract_address(address, type)
-      parsed = EmailParser.parse_address(address)
-
-      if type == :hash
-        parsed
-      else
-        parsed[type]
-      end
+    def extract_address(address)
+      EmailParser.parse_address(address)
     end
 
     def extract_body
